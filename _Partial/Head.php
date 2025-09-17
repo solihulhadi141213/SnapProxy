@@ -45,5 +45,9 @@
 
     <!-- Custom CSS -->
     <link href="assets/css/style.css?v=<?php echo date('YmdHis'); ?>" rel="stylesheet">
+
+    <!-- Prism -->
+    <link href="assets/vendor/prism/prism.css" rel="stylesheet" />
+    <script src="assets/vendor/prism/prism.js"></script>
     
 </head>

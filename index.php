@@ -33,14 +33,14 @@
                     //Topologi
                     include "_Partial/Topologi.php"; 
 
-                    //Direktori
-                    include "_Partial/Direktori.php"; 
-
                     //Spesifikasi
                     include "_Partial/Spesifikasi.php"; 
 
                     //Instalasi
                     include "_Partial/Instalasi.php";
+
+                    //Periapan
+                    include "_Partial/Periapan.php"; 
 
                     //Dokumentasi API
                     include "_Partial/Dokumentasi.php"; 
@@ -61,7 +61,7 @@
         <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 
         <!-- Custome Script -->
-         <script src="_Page/Home/Home.js"></script>
+         <script src="_Page/Home/Home.js?v=1"></script>
 
     </body>
 </html>

@@ -32,3 +32,31 @@ footer {
     font-size: 0.9rem;
     color: #666;
 }
+/* Custom Card Style */
+.custom-card {
+    background-color: #ffffff;         /* Putih */
+    border: 1px solid #e0e0e0;        /* Garis pinggir abu cerah & lembut */
+    border-radius: 0.75rem;           /* Sudut tumpul */
+    box-shadow: none !important;      /* Hilangkan shadow */
+}
+
+ .copy-btn {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    border: none;
+    background: #f8f9fa;
+    border-radius: 50%;
+    padding: 6px 9px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: background 0.3s;
+}
+.copy-btn:hover {
+    background: #e2e6ea;
+}
+textarea#random_string {
+    padding-right: 40px; /* beri ruang agar tidak tertutup tombol */
+    resize: none;
+    min-height: 80px;
+}
