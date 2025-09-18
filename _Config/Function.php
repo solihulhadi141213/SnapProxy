@@ -162,4 +162,8 @@
         $Response=$data;
         return $Response;
     }
+    // Fungsi sederhana validasi URL
+    function isValidUrl($url) {
+        return filter_var($url, FILTER_VALIDATE_URL) !== false;
+    }
 ?>
