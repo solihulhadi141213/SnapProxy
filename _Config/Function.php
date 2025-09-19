@@ -1,15 +1,57 @@
 <?php
     //Memanggil Detail Data
     function getDataDetail($Conn,$NamaDb,$NamaParam,$IdParam,$Kolom){
-        $QryParam = mysqli_query($Conn,"SELECT * FROM $NamaDb WHERE $NamaParam='$IdParam'")or die(mysqli_error($Conn));
-        $DataParam = mysqli_fetch_array($QryParam);
-        if(empty($DataParam[$Kolom])){
-            $Response="";
-        }else{
-            $Response=$DataParam[$Kolom];
+         // Validasi input yang diperlukan
+        if (empty($Conn)) {
+            return "No Database Connection";
         }
-        return $Response;
+        if (empty($NamaDb)) {
+            return "No Table Selected";
+        }
+        if (empty($NamaParam)) {
+            return "No Parameter Selected";
+        }
+        if (empty($Value)) {
+            return "No Value Provided";
+        }
+        if (empty($Kolom)) {
+            return "No Column Selected";
+        }
+    
+        // Escape table name and column name untuk mencegah SQL Injection
+        $NamaDb = mysqli_real_escape_string($Conn, $NamaDb);
+        $NamaParam = mysqli_real_escape_string($Conn, $NamaParam);
+        $Kolom = mysqli_real_escape_string($Conn, $Kolom);
+    
+        // Menggunakan prepared statement
+        $Qry = $Conn->prepare("SELECT $Kolom FROM $NamaDb WHERE $NamaParam = ?");
+        if ($Qry === false) {
+            return "Query Preparation Failed: " . $Conn->error;
+        }
+    
+        // Bind parameter
+        $Qry->bind_param("s", $Value);
+    
+        // Eksekusi query
+        if (!$Qry->execute()) {
+            return "Query Execution Failed: " . $Qry->error;
+        }
+    
+        // Mengambil hasil
+        $Result = $Qry->get_result();
+        $Data = $Result->fetch_assoc();
+    
+        // Menutup statement
+        $Qry->close();
+    
+        // Mengembalikan hasil
+        if (empty($Data[$Kolom])) {
+            return "";
+        } else {
+            return $Data[$Kolom];
+        }
     }
+
     //Membersihkan karakter
     function validateAndSanitizeInput($input) {
         // Menghapus karakter yang tidak diinginkan
@@ -17,6 +59,17 @@
         $input = stripslashes($input);
         $input = htmlspecialchars($input);
         return $input;
+    }
+
+    function generate_uuid() {
+        $data = random_bytes(16);
+
+        // Atur versi ke 0100
+        $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
+        // Atur variant ke 10xx
+        $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
+
+        return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
     //Membuat Token
     function generateRandomString($length) {
@@ -30,23 +83,21 @@
     }
     function InsertKodeTransaksi($Conn, $log) {
         // Mendapatkan nilai dari array $log
+        $id_transaction = $log['id_transaction'];
         $kode_transaksi = $log['kode_transaksi'];
-        $order_id = $log['order_id'];
-        $datetime = $log['datetime'];
-        $ServerKey = $log['ServerKey'];
-        $Production = $log['Production'];
-        $gross_amount = $log['gross_amount'];
-        $first_name = $log['first_name'];
-        $last_name = $log['last_name'];
-        $email = $log['email'];
-        $phone = $log['phone'];
-        $snapToken = $log['snapToken'];
+        $order_id       = $log['order_id'];
+        $datetime       = $log['datetime'];
+        $ServerKey      = $log['ServerKey'];
+        $Production     = $log['Production'];
+        $gross_amount   = $log['gross_amount'];
+        $name           = $log['name'];
+        $email          = $log['email'];
+        $phone          = $log['phone'];
+        $snapToken      = $log['snapToken'];
         
-        // Menggabungkan first name dan last name
-        $name = "$first_name $last_name";
-    
         // Menyiapkan query menggunakan prepared statement
-        $stmt = $Conn->prepare("INSERT INTO order_transaksi (
+        $stmt = $Conn->prepare("INSERT INTO transaction (
+            id_transaction,
             kode_transaksi,
             order_id,
             datetime,
@@ -57,11 +108,12 @@
             email,
             phone,
             snapToken
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
         // Bind parameter untuk menghindari SQL Injection
         $stmt->bind_param(
-            "sssssdssss",  // s = string, d = double (gross_amount di sini dianggap sebagai decimal/float)
+            "ssssssdssss",  // s = string, d = double (gross_amount di sini dianggap sebagai decimal/float)
+            $id_transaction, 
             $kode_transaksi, 
             $order_id, 
             $datetime, 
@@ -89,23 +141,23 @@
     
     function UpdateKodeTransaksi($Conn, $log){
         // Mendapatkan nilai dari array $log
+        $id_transaction = $log['id_transaction'];
         $kode_transaksi = $log['kode_transaksi'];
-        $order_id = $log['order_id'];
-        $datetime = $log['datetime'];
-        $ServerKey = $log['ServerKey'];
-        $Production = $log['Production'];
-        $gross_amount = $log['gross_amount'];
-        $first_name = $log['first_name'];
-        $last_name = $log['last_name'];
-        $email = $log['email'];
-        $phone = $log['phone'];
-        $snapToken = $log['snapToken'];
+        $order_id       = $log['order_id'];
+        $datetime       = $log['datetime'];
+        $ServerKey      = $log['ServerKey'];
+        $Production     = $log['Production'];
+        $gross_amount   = $log['gross_amount'];
+        $name           = $log['name'];
+        $email          = $log['email'];
+        $phone          = $log['phone'];
+        $snapToken      = $log['snapToken'];
         
         // Menggabungkan first name dan last name
         $name = "$first_name $last_name";
 
         //Melakukan Update
-        $query = "UPDATE order_transaksi SET 
+        $query = "UPDATE transaction SET 
             kode_transaksi='$kode_transaksi',
             order_id='$order_id',
             datetime='$datetime',
@@ -116,7 +168,7 @@
             email='$email',
             phone='$phone',
             snapToken='$snapToken'
-        WHERE kode_transaksi='$kode_transaksi' AND order_id='$order_id'";
+        WHERE id_transaction='$id_transaction'";
         $UpdateOrderId = mysqli_query($Conn, $query);
         if ($UpdateOrderId) {
             $Response = "Berhasil";
@@ -126,6 +178,7 @@
         }
         return $Response;
     }
+    
     //Delete Data
     function DeleteData($Conn,$NamaDb,$NamaParam,$IdParam){
         $HapusData = mysqli_query($Conn, "DELETE FROM $NamaDb WHERE $NamaParam='$IdParam'") or die(mysqli_error($Conn));
@@ -165,5 +218,37 @@
     // Fungsi sederhana validasi URL
     function isValidUrl($url) {
         return filter_var($url, FILTER_VALIDATE_URL) !== false;
+    }
+
+    function insertLog($Conn, $id_setting_payment, $order_id, $datetime, $status) {
+        
+        // Menyiapkan query menggunakan prepared statement
+        $stmt = $Conn->prepare("INSERT INTO log_notification (
+            id_setting_payment,
+            order_id,
+            datetime,
+            status
+        ) VALUES (?, ?, ?, ?)");
+    
+        // Bind parameter untuk menghindari SQL Injection
+        $stmt->bind_param(
+            "isss",  // s = string, d = double (gross_amount di sini dianggap sebagai decimal/float)
+            $id_setting_payment, 
+            $order_id, 
+            $datetime, 
+            $status
+        );
+    
+        // Eksekusi query dan cek hasilnya
+        if ($stmt->execute()) {
+            $Response = "Berhasil";
+        } else {
+            $Response = "Input Data Gagal: " . $stmt->error; // Untuk debug error
+        }
+    
+        // Menutup prepared statement
+        $stmt->close();
+    
+        return $Response;
     }
 ?>

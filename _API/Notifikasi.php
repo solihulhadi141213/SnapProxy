@@ -1,88 +1,74 @@
 <?php
+    //Koneksi
     include "_Config/Connection.php";
     include "_Config/Function.php";
     
     // Buka Pengaturan / Setting
-    $QryParam = $Conn->prepare("SELECT * FROM setting_payment WHERE id_setting_payment = ?");
-    $id_setting_payment = 1;
-    $QryParam->bind_param('i', $id_setting_payment);
+    $QryParam = $Conn->prepare("SELECT * FROM setting_payment WHERE status = ?");
+    $status = "active";
+    $QryParam->bind_param('s', $status);
     $QryParam->execute();
     $ResultParam = $QryParam->get_result();
     $DataParam = $ResultParam->fetch_array();
     
-    if (empty($DataParam['server_key'])) {
-        $server_key = "";
-        $notifikasi = [
-            "status" => 'server_key null',
-            "payment_log" => ''
-        ];
-        $kode_transaksi = "";
-        $order_id = "";
-        $transaction_time = date('Y-m-d H:i:s');
-        $status_code = "0";
-        $transaction_status = "";
-        $payment_type = "";
-        $gross_amount = "0";
-        $fraud_status = "";
-    } else {
-        if (empty($DataParam['production'])) {
-            $notifikasi = [
-                "status" => 'production null',
-                "payment_log" => ''
-            ];
-            $kode_transaksi = "";
-            $order_id = "";
-            $transaction_time = date('Y-m-d H:i:s');
-            $status_code = "0";
-            $transaction_status = "";
-            $payment_type = "";
-            $gross_amount = "0";
-            $fraud_status = "";
-        } else {
-            require_once "midtrans-php-master/Midtrans.php";
+    // Menutup koneksi statement
+    $stmt->close();
+    $Conn->close();
     
-            // Konfigurasi Koneksi Midtrans
-            \Midtrans\Config::$isProduction = $DataParam['production'] === "true";
-            \Midtrans\Config::$serverKey = $DataParam['server_key'];
-    
-            $notif = new \Midtrans\Notification();
-    
-            // Membuat Variabel Lainnya dari Notifikasi Midtrans
-            $transaction_time = $notif->transaction_time;
-            $status_code = $notif->status_code;
-            $transaction_status = $notif->transaction_status;
-            $order_id = $notif->order_id;
-            $payment_type = $notif->payment_type;
-            $gross_amount = $notif->gross_amount;
-            $fraud_status = $notif->fraud_status;
-    
-            // Mengambil kode_transaksi dari order_id
-            $kode_transaksi = getDataDetail($Conn, 'order_transaksi', 'order_id', $order_id, 'kode_transaksi');
-        }
+    //Jika Tidak ada pengaturan
+    if (empty($DataParam['id_setting_payment'])) {
+        $id_setting_payment = 0;
+        $status             = "No Setting";
+        $datetime           = date('Y-m-d H:i:s');
+        $order_id           = "";
+        $insert_log         = insertLog($Conn, $id_setting_payment, $order_id, $datetime, $status);
+        echo "No Setting";
+        exit;
     }
-    
-    // Buat Json Notifikasi
-    $notifikasi['payment_log'] = [
-        'kode_transaksi' => $kode_transaksi,
-        'order_id' => $order_id,
-        'transaction_time' => $transaction_time,
-        'status_code' => $status_code,
-        'transaction_status' => $transaction_status,
-        'payment_type' => $payment_type,
-        'gross_amount' => $gross_amount,
-        'fraud_status' => $fraud_status
-    ];
-    
-    $jsonNotif = json_encode($notifikasi);
+
+    //Jika Ada Pengaturan
+    $id_setting_payment = $DataParam['id_setting_payment'];
+
+    //Library Midtrans
+    require_once "../midtrans-php-master/Midtrans.php";
+
+    // Konfigurasi Koneksi Midtrans
+    \Midtrans\Config::$isProduction = $DataParam['production'] === "true";
+    \Midtrans\Config::$serverKey = $DataParam['server_key'];
+
+    $notif = new \Midtrans\Notification();
+
+    // Membuat Variabel Lainnya dari Notifikasi Midtrans
+    $transaction_time   = $notif->transaction_time;
+    $status_code        = $notif->status_code;
+    $transaction_status = $notif->transaction_status;
+    $order_id           = $notif->order_id;
+    $payment_type       = $notif->payment_type;
+    $gross_amount       = $notif->gross_amount;
+    $fraud_status       = $notif->fraud_status;
+
+    // Mengambil kode_transaksi dari order_id
+    $kode_transaksi = getDataDetail($Conn, 'transaction ', 'order_id', $order_id, 'kode_transaksi');
+    $id_transaction = getDataDetail($Conn, 'transaction ', 'order_id', $order_id, 'id_transaction');
     
     // Simpan Log Notifikasi
     $stmt = $Conn->prepare("
-        INSERT INTO log_payment 
-        (kode_transaksi, order_id, transaction_time, status_code, payment_type, gross_amount, fraud_status, transaction_status) 
+        INSERT INTO log_payment (
+            id_transaction, 
+            kode_transaksi, 
+            order_id, 
+            transaction_time, 
+            status_code, 
+            payment_type, 
+            gross_amount, 
+            fraud_status, 
+            transaction_status
+        ) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->bind_param(
-        'ssssssss', 
+        'sssssssss', 
+        $id_transaction, 
         $kode_transaksi, 
         $order_id, 
         $transaction_time, 
@@ -95,6 +81,7 @@
     
     $Input = $stmt->execute();
     if ($Input) {
+        
         //Apabila Ada URL Call Back
         if (!empty($DataParam['urll_call_back'])) {
             if($transaction_status=="settlement"){
@@ -124,13 +111,23 @@
             ));
             $response = curl_exec($curl);
             curl_close($curl);
+            echo "$response";
+            $id_setting_payment = $DataParam['id_setting_payment'];
+            $status             = "$response";
+            $datetime           = date('Y-m-d H:i:s');
+            $insert_log         = insertLog($Conn, $id_setting_payment, $order_id, $datetime, $status);
+        }else{
+            echo "URL Call Back No Set";
+            $id_setting_payment = $DataParam['id_setting_payment'];
+            $status             = "URL Call Back No Set";
+            $datetime           = date('Y-m-d H:i:s');
+            $insert_log         = insertLog($Conn, $id_setting_payment, $order_id, $datetime, $status);
         }
-        echo "Success";
     } else {
         echo "Input Data log_payment Gagal: " . $stmt->error;
+        $id_setting_payment = $DataParam['id_setting_payment'];
+        $status             = "Input Data log_payment Gagal: " . $stmt->error;
+        $datetime           = date('Y-m-d H:i:s');
+        $insert_log         = insertLog($Conn, $id_setting_payment, $order_id, $datetime, $status);
     }
-    
-    // Menutup koneksi statement
-    $stmt->close();
-    $Conn->close();
 ?>
