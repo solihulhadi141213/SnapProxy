@@ -79,6 +79,11 @@
         exit;
     }
 
+    if(!ctype_digit((string)$id_setting_payment)){
+        echo json_encode(["status" => "id_setting_payment tidak valid", "code" => 400, "metadata" => ["id_setting_payment"=>$id_setting_payment]]);
+        exit;
+    }
+
     // Ambil variabel & sanitasi
     $id_transaction     = generate_uuid();
     $kode_transaksi     = validateAndSanitizeInput($data['kode_transaksi'] ?? "");
@@ -150,14 +155,19 @@
     try {
         $snapToken = \Midtrans\Snap::getSnapToken($params);
     } catch (Exception $e) {
-        echo json_encode(["status" => "Midtrans error: " . $e->getMessage(), "code" => 500, "metadata" => null]);
+        $metadata=[
+            "server_key"=> $server_key,
+            "client_key"=> $client_key
+        ];
+        echo json_encode(["status" => "Midtrans error: " . $e->getMessage(), "code" => 500, "metadata" => $metadata]);
         exit;
     }
 
     if(!empty($snapToken)){
         //Bungkus Data
-        $log = Array (
+        $payload = Array (
             "id_transaction" => $id_transaction,
+            "id_setting_payment" => $id_setting_payment,
             "kode_transaksi" => $kode_transaksi,
             "order_id" => $order_id,
             "datetime" => $datetime,
@@ -175,10 +185,10 @@
         $DataOrder = mysqli_fetch_array($QryOrder);
         if(empty($DataOrder['id_transaction'])){
             //Jika Tidak Ada Maka Insert
-            $simpan=InsertKodeTransaksi($Conn,$log);
+            $simpan=InsertKodeTransaksi($Conn,$payload);
         }else{
             //Jika Ada Maka Update
-            $simpan=UpdateKodeTransaksi($Conn,$log);
+            $simpan=UpdateKodeTransaksi($Conn,$payload);
         }
         if($simpan!=="Berhasil"){
             echo json_encode(["status" => "Terjadi kesalahan pada saat menyimpan data transaksi : $simpan", "code" => 500, "metadata" => null]);

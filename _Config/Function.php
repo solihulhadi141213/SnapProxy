@@ -11,7 +11,7 @@
         if (empty($NamaParam)) {
             return "No Parameter Selected";
         }
-        if (empty($Value)) {
+        if (empty($IdParam)) {
             return "No Value Provided";
         }
         if (empty($Kolom)) {
@@ -30,7 +30,7 @@
         }
     
         // Bind parameter
-        $Qry->bind_param("s", $Value);
+        $Qry->bind_param("s", $IdParam);
     
         // Eksekusi query
         if (!$Qry->execute()) {
@@ -83,21 +83,23 @@
     }
     function InsertKodeTransaksi($Conn, $log) {
         // Mendapatkan nilai dari array $log
-        $id_transaction = $log['id_transaction'];
-        $kode_transaksi = $log['kode_transaksi'];
-        $order_id       = $log['order_id'];
-        $datetime       = $log['datetime'];
-        $ServerKey      = $log['ServerKey'];
-        $Production     = $log['Production'];
-        $gross_amount   = $log['gross_amount'];
-        $name           = $log['name'];
-        $email          = $log['email'];
-        $phone          = $log['phone'];
-        $snapToken      = $log['snapToken'];
+        $id_transaction     = $log['id_transaction'];
+        $id_setting_payment = $log['id_setting_payment'];
+        $kode_transaksi     = $log['kode_transaksi'];
+        $order_id           = $log['order_id'];
+        $datetime           = $log['datetime'];
+        $ServerKey          = $log['ServerKey'];
+        $Production         = $log['Production'];
+        $gross_amount       = $log['gross_amount'];
+        $name               = $log['name'];
+        $email              = $log['email'];
+        $phone              = $log['phone'];
+        $snapToken          = $log['snapToken'];
         
         // Menyiapkan query menggunakan prepared statement
         $stmt = $Conn->prepare("INSERT INTO transaction (
             id_transaction,
+            id_setting_payment,
             kode_transaksi,
             order_id,
             datetime,
@@ -108,12 +110,13 @@
             email,
             phone,
             snapToken
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
         // Bind parameter untuk menghindari SQL Injection
         $stmt->bind_param(
-            "ssssssdssss",  // s = string, d = double (gross_amount di sini dianggap sebagai decimal/float)
+            "sisssssdssss",  // s = string, d = double (gross_amount di sini dianggap sebagai decimal/float)
             $id_transaction, 
+            $id_setting_payment, 
             $kode_transaksi, 
             $order_id, 
             $datetime, 
@@ -141,17 +144,18 @@
     
     function UpdateKodeTransaksi($Conn, $log){
         // Mendapatkan nilai dari array $log
-        $id_transaction = $log['id_transaction'];
-        $kode_transaksi = $log['kode_transaksi'];
-        $order_id       = $log['order_id'];
-        $datetime       = $log['datetime'];
-        $ServerKey      = $log['ServerKey'];
-        $Production     = $log['Production'];
-        $gross_amount   = $log['gross_amount'];
-        $name           = $log['name'];
-        $email          = $log['email'];
-        $phone          = $log['phone'];
-        $snapToken      = $log['snapToken'];
+        $id_transaction     = $log['id_transaction'];
+        $id_setting_payment = $log['id_setting_payment'];
+        $kode_transaksi     = $log['kode_transaksi'];
+        $order_id           = $log['order_id'];
+        $datetime           = $log['datetime'];
+        $ServerKey          = $log['ServerKey'];
+        $Production         = $log['Production'];
+        $gross_amount       = $log['gross_amount'];
+        $name               = $log['name'];
+        $email              = $log['email'];
+        $phone              = $log['phone'];
+        $snapToken          = $log['snapToken'];
         
         // Menggabungkan first name dan last name
         $name = "$first_name $last_name";
@@ -251,4 +255,3 @@
     
         return $Response;
     }
-?>

@@ -1,5 +1,7 @@
-
 <?php
+    //Koneksi dan Session
+    include "_Config/Connection.php"; 
+    include "_Config/Session.php"; 
     // Tentukan protocol (http/https)
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' 
         || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
@@ -47,6 +49,9 @@
 
                     //Tools
                     include "_Partial/Tools.php"; 
+
+                    //Interactive Aplication
+                    include "_Partial/Aplication.php"; 
 
                     //Footer
                     include "_Partial/Footer.php"; 

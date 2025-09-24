@@ -4,30 +4,26 @@
     date_default_timezone_set('Asia/Jakarta');
 
     // Inisialisasi variabel
-    $SessionIdAkses = "";
-    $SessionLoginToken = "";
+    $id_account_session = "";
+    $session_token = "";
 
     // Validasi session
-    if (!empty($_SESSION["id_akses"]) && !empty($_SESSION["login_token"])) {
-        $SessionIdAkses = $_SESSION["id_akses"];
-        $SessionLoginToken = $_SESSION["login_token"];
+    if (!empty($_SESSION["id_account_session"]) && !empty($_SESSION["session_token"])) {
+        $id_account_session = $_SESSION["id_account_session"];
+        $session_token      = $_SESSION["session_token"];
 
         // Validasi Token Akses menggunakan prepared statement
-        $QryAksesLogin = $Conn->prepare("
-            SELECT id_akses, date_creat, date_expired, token 
-            FROM akses_login 
-            WHERE id_akses = ? AND token = ?
-        ");
+        $QryAksesLogin = $Conn->prepare("SELECT * FROM account_session WHERE id_account_session = ? AND session_token = ?");
         $SessionModeAkses = "default"; // Pastikan variabel ini ada dan sesuai dengan kebutuhan
-        $QryAksesLogin->bind_param("is", $SessionIdAkses, $SessionLoginToken);
+        $QryAksesLogin->bind_param("ss", $id_account_session, $session_token);
         $QryAksesLogin->execute();
         $ResultAksesLogin = $QryAksesLogin->get_result();
         $DataAksesLogin = $ResultAksesLogin->fetch_assoc();
         $QryAksesLogin->close();
 
-        // Validasi hasil query
+        // Jika Data Ditemukan
         if ($DataAksesLogin) {
-            $SessionDateExpired = $DataAksesLogin['date_expired'];
+            $SessionDateExpired = $DataAksesLogin['session_expired'];
             $DateSekarang = date('Y-m-d H:i:s');
 
             // Periksa apakah token masih berlaku
@@ -36,29 +32,26 @@
                 $date_expired_new = date('Y-m-d H:i:s', strtotime("+1 hour")); // Hitung waktu expired baru
 
                 // Update token dengan prepared statement
-                $UpdateToken = $Conn->prepare("
-                    UPDATE akses_login 
-                    SET date_expired = ? 
-                    WHERE id_akses = ?
-                ");
-                $UpdateToken->bind_param("ss", $date_expired_new, $SessionIdAkses);
+                $UpdateToken = $Conn->prepare("UPDATE account_session SET session_expired = ? WHERE id_account_session = ?");
+                $UpdateToken->bind_param("ss", $date_expired_new, $id_account_session);
                 if ($UpdateToken->execute()) {
-                    $SessionLoginToken = $DataAksesLogin['token'];
+                    $id_account_session     = $DataAksesLogin['id_account_session'];
+                    $session_token          = $DataAksesLogin['session_token'];
                 } else {
                     // Jika update gagal, reset session
-                    $SessionIdAkses = "";
-                    $SessionLoginToken = "";
+                    $id_account_session = "";
+                    $session_token      = "";
                 }
                 $UpdateToken->close();
             } else {
                 // Token expired
-                $SessionIdAkses = "";
-                $SessionLoginToken = "";
+                $id_account_session     = "";
+                $session_token          = "";
             }
         } else {
             // Jika data tidak ditemukan
-            $SessionIdAkses = "";
-            $SessionLoginToken = "";
+            $id_account_session = "";
+            $session_token = "";
         }
     }
 ?>
